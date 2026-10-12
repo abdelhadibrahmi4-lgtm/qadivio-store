@@ -1,0 +1,20 @@
+[
+  {
+    "code": "QADIVIO10",
+    "discountPercentage": 10,
+    "minOrderAmount": 1000,
+    "active": true
+  },
+  {
+    "code": "WELCOME20",
+    "discountPercentage": 20,
+    "minOrderAmount": 2000,
+    "active": true
+  },
+  {
+    "code": "RAMADAN",
+    "discountPercentage": 15,
+    "minOrderAmount": 1500,
+    "active": true
+  }
+]

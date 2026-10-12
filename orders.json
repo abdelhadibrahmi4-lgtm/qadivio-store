@@ -1,0 +1,86 @@
+[
+  {
+    "customerName": "رياض محرز",
+    "customerPhone": "0555998877",
+    "customerEmail": "riyad.test@gmail.com",
+    "wilayaCode": "16",
+    "wilayaName": "الجزائر العاصمة",
+    "city": "سيدي يحيى",
+    "notes": "",
+    "items": [
+      {
+        "productId": "prod-gemini-pro",
+        "name": "Gemini Advanced 2.0 Pro",
+        "variantName": "شهر واحد",
+        "accountTypeName": "تفعيل رسمي على إيميلك الشخصي",
+        "quantity": 1,
+        "price": 1400
+      }
+    ],
+    "subtotal": 1400,
+    "discount": 0,
+    "total": 1400,
+    "paymentMethod": "baridimob",
+    "paymentReceiptNumber": "BM-TEST-9988",
+    "id": "QD-2026-3159",
+    "createdAt": "2026-10-10T21:39:23.948Z",
+    "status": "pending",
+    "trackingToken": "trk_4y38oa0"
+  },
+  {
+    "id": "QD-2026-1042",
+    "createdAt": "2026-10-10T16:36:34.706Z",
+    "customerName": "محمد أمين رحماني",
+    "customerPhone": "0550123456",
+    "customerEmail": "amine.r@gmail.com",
+    "wilayaCode": "16",
+    "wilayaName": "الجزائر العاصمة",
+    "city": "باب الزوار",
+    "notes": "يرجى التفعيل على نفس الإيميل",
+    "items": [
+      {
+        "productId": "prod-gemini-pro",
+        "name": "Gemini Advanced 2.0 Pro",
+        "variantName": "3 أشهر (الأكثر توفيراً)",
+        "accountTypeName": "تفعيل رسمي على إيميلك الشخصي",
+        "quantity": 1,
+        "price": 3400
+      }
+    ],
+    "subtotal": 3400,
+    "discount": 340,
+    "couponCode": "QADIVIO10",
+    "total": 3060,
+    "paymentMethod": "baridimob",
+    "paymentReceiptNumber": "BM-9823412",
+    "status": "completed",
+    "activationCodeOrAccount": "Google Invitation link sent to amine.r@gmail.com",
+    "trackingToken": "tr_1042_secured"
+  },
+  {
+    "id": "QD-2026-1088",
+    "createdAt": "2026-10-10T19:36:34.707Z",
+    "customerName": "فاطمة الزهراء",
+    "customerPhone": "0661987654",
+    "customerEmail": "fatima.design@gmail.com",
+    "wilayaCode": "31",
+    "wilayaName": "وهران",
+    "city": "السانية",
+    "items": [
+      {
+        "productId": "prod-canva-pro",
+        "name": "Canva Pro",
+        "variantName": "سنة كاملة (12 شهر)",
+        "accountTypeName": "على إيميلك الشخصي الرسمي",
+        "quantity": 1,
+        "price": 950
+      }
+    ],
+    "subtotal": 950,
+    "discount": 0,
+    "total": 950,
+    "paymentMethod": "baridimob",
+    "status": "verifying_payment",
+    "trackingToken": "tr_1088_secured"
+  }
+]
