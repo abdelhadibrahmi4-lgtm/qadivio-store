@@ -14,7 +14,8 @@ import {
   Headphones, 
   CreditCard,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Edit
 } from 'lucide-react';
 import { Product, ProductVariant, AccountTypeOption } from '@/types';
 import { formatPrice } from '@/lib/utils';
@@ -34,6 +35,13 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
   const [selectedAccountType, setSelectedAccountType] = useState<AccountTypeOption>(product.accountTypes[0]);
   const [isQuickBuyOpen, setIsQuickBuyOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsAdmin(!!localStorage.getItem('qadivio_admin_session'));
+    }
+  }, []);
 
   // Trigger Meta Pixel ViewContent event on page load
   useEffect(() => {
@@ -90,6 +98,33 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
           <ChevronRight className="w-3.5 h-3.5 rotate-180" />
           <span className="text-slate-900 dark:text-white font-bold truncate max-w-xs">{product.name}</span>
         </nav>
+
+        {/* Admin Quick Edit Bar (Only visible when logged in as Admin) */}
+        {isAdmin && (
+          <div className="bg-gradient-to-r from-blue-900/90 via-indigo-900/90 to-slate-900 border border-blue-400/40 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center font-bold">
+                <Sparkles className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-white">وضع إدارة المتجر (Admin Mode)</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">نشط</span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  أنت مسجل كمدير. يمكنك تعديل باقات هذا الاشتراك وأسعاره بالدينار والمدد مباشرة بدون أي كود برمجي:
+                </p>
+              </div>
+            </div>
+            <Link
+              href={`/admin?edit=${product.slug}`}
+              className="shrink-0 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl text-xs font-black transition flex items-center gap-2 shadow-md hover:scale-105 active:scale-95"
+            >
+              <Edit className="w-3.5 h-3.5" />
+              <span>تعديل الباقات والأسعار كمدير ⚙️</span>
+            </Link>
+          </div>
+        )}
 
         {/* Main Product Showcase Box */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 bg-white dark:bg-slate-900/90 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 sm:p-8 shadow-xl">

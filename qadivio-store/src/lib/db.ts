@@ -168,8 +168,20 @@ export async function findOrdersByPhone(phone: string): Promise<Order[]> {
 export async function createOrder(data: Omit<Order, 'id' | 'createdAt' | 'status' | 'trackingToken'>): Promise<Order> {
   ensureDataDirectory();
   const orders = await getOrders();
+  const products = await getProducts();
+
+  // Attach accurate wholesale cost price for profit tracking
+  const enrichedItems = data.items.map((it) => {
+    if (it.costPrice !== undefined) return it;
+    const prod = products.find((p) => p.id === it.productId);
+    const variant = prod?.variants.find((v) => v.name === it.variantName);
+    const costPrice = variant?.costPrice ?? prod?.costPrice ?? Math.round(it.price * 0.55);
+    return { ...it, costPrice };
+  });
+
   const newOrder: Order = {
     ...data,
+    items: enrichedItems,
     id: generateOrderId(),
     createdAt: new Date().toISOString(),
     status: 'pending',
@@ -237,24 +249,117 @@ export async function validateCoupon(code: string, orderSubtotal: number): Promi
   };
 }
 
-// ---------------- ADMIN STATS ----------------
+// ---------------- ADMIN STATS & PROFIT TRACKING ----------------
 
 export async function getAdminStats() {
   const orders = await getOrders();
   const products = await getProducts();
 
-  const totalRevenue = orders
-    .filter((o) => o.status === 'completed')
-    .reduce((sum, o) => sum + o.total, 0);
+  const completedOrders = orders.filter((o) => o.status === 'completed');
+  const pendingOrders = orders.filter((o) => o.status === 'pending' || o.status === 'verifying_payment' || o.status === 'processing');
 
-  const pendingOrders = orders.filter((o) => o.status === 'pending' || o.status === 'verifying_payment').length;
-  const completedOrders = orders.filter((o) => o.status === 'completed').length;
+  // Helper for order wholesale cost
+  const getOrderWholesaleCost = (order: Order) => {
+    return order.items.reduce((sum, it) => {
+      let cost = it.costPrice;
+      if (typeof cost !== 'number') {
+        const prod = products.find((p) => p.id === it.productId);
+        const variant = prod?.variants.find((v) => v.name === it.variantName);
+        cost = variant?.costPrice ?? prod?.costPrice ?? Math.round(it.price * 0.55);
+      }
+      return sum + cost * (it.quantity || 1);
+    }, 0);
+  };
+
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  let totalRevenue = 0;
+  let totalWholesaleCost = 0;
+  let todayRevenue = 0;
+  let todayWholesaleCost = 0;
+  let monthRevenue = 0;
+  let monthWholesaleCost = 0;
+
+  completedOrders.forEach((o) => {
+    const oCost = getOrderWholesaleCost(o);
+    totalRevenue += o.total;
+    totalWholesaleCost += oCost;
+
+    const oDate = new Date(o.createdAt);
+    if (oDate.toISOString().split('T')[0] === todayStr) {
+      todayRevenue += o.total;
+      todayWholesaleCost += oCost;
+    }
+    if (oDate.getMonth() === currentMonth && oDate.getFullYear() === currentYear) {
+      monthRevenue += o.total;
+      monthWholesaleCost += oCost;
+    }
+  });
+
+  const totalNetProfit = Math.max(0, totalRevenue - totalWholesaleCost);
+  const todayNetProfit = Math.max(0, todayRevenue - todayWholesaleCost);
+  const monthNetProfit = Math.max(0, monthRevenue - monthWholesaleCost);
+  const profitMargin = totalRevenue > 0 ? Number(((totalNetProfit / totalRevenue) * 100).toFixed(1)) : 0;
+
+  // Breakdown per product
+  const productStatsMap: Record<string, {
+    productId: string;
+    name: string;
+    unitsSold: number;
+    revenue: number;
+    cost: number;
+    profit: number;
+  }> = {};
+
+  completedOrders.forEach((o) => {
+    o.items.forEach((it) => {
+      let cost = it.costPrice;
+      if (typeof cost !== 'number') {
+        const prod = products.find((p) => p.id === it.productId);
+        const variant = prod?.variants.find((v) => v.name === it.variantName);
+        cost = variant?.costPrice ?? prod?.costPrice ?? Math.round(it.price * 0.55);
+      }
+      const qty = it.quantity || 1;
+      const rev = it.price * qty;
+      const totalItemCost = cost * qty;
+
+      if (!productStatsMap[it.productId]) {
+        productStatsMap[it.productId] = {
+          productId: it.productId,
+          name: it.name,
+          unitsSold: 0,
+          revenue: 0,
+          cost: 0,
+          profit: 0,
+        };
+      }
+      productStatsMap[it.productId].unitsSold += qty;
+      productStatsMap[it.productId].revenue += rev;
+      productStatsMap[it.productId].cost += totalItemCost;
+      productStatsMap[it.productId].profit += Math.max(0, rev - totalItemCost);
+    });
+  });
+
+  const productsProfitBreakdown = Object.values(productStatsMap).sort((a, b) => b.profit - a.profit);
 
   return {
     totalRevenue,
+    totalWholesaleCost,
+    totalNetProfit,
+    todayRevenue,
+    todayWholesaleCost,
+    todayNetProfit,
+    monthRevenue,
+    monthWholesaleCost,
+    monthNetProfit,
+    profitMargin,
     totalOrders: orders.length,
-    pendingOrders,
-    completedOrders,
+    pendingOrders: pendingOrders.length,
+    completedOrders: completedOrders.length,
     productsCount: products.length,
+    productsProfitBreakdown,
   };
 }

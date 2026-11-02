@@ -21,29 +21,59 @@ import {
   Activity,
   Layers,
   Edit,
-  ExternalLink
+  ExternalLink,
+  TrendingUp,
+  Wallet,
+  Coins,
+  BarChart3,
+  Calendar,
+  Percent,
+  ArrowUpRight
 } from 'lucide-react';
 import { Order, Product, OrderStatus } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { META_PIXEL_ID } from '@/lib/meta-pixel';
+import { AdminProductEditModal } from '@/components/admin/AdminProductEditModal';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'stats' | 'settings'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'profits' | 'settings'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState({
     totalRevenue: 0,
+    totalWholesaleCost: 0,
+    totalNetProfit: 0,
+    todayRevenue: 0,
+    todayWholesaleCost: 0,
+    todayNetProfit: 0,
+    monthRevenue: 0,
+    monthWholesaleCost: 0,
+    monthNetProfit: 0,
+    profitMargin: 0,
     totalOrders: 0,
     pendingOrders: 0,
     completedOrders: 0,
     productsCount: 0,
+    productsProfitBreakdown: [] as Array<{
+      productId: string;
+      name: string;
+      unitsSold: number;
+      revenue: number;
+      cost: number;
+      profit: number;
+    }>,
   });
 
   const [isLoading, setIsLoading] = useState(true);
   const [orderFilter, setOrderFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+
+  // Selected product for live editing modal
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Selected order for status update modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -60,6 +90,22 @@ export default function AdminDashboardPage() {
     }
     loadData();
   }, [router]);
+
+  // Support direct edit via URL query: /admin?edit=slug
+  useEffect(() => {
+    if (typeof window !== 'undefined' && products.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const editSlug = params.get('edit');
+      if (editSlug) {
+        const target = products.find((p) => p.slug === editSlug || p.id === editSlug);
+        if (target) {
+          setActiveTab('products');
+          setEditingProduct(target);
+          setIsEditModalOpen(true);
+        }
+      }
+    }
+  }, [products]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -173,55 +219,74 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
+      {/* KPI Stats & Profit Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Revenue */}
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-sm">
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-xs font-bold">إجمالي المبيعات</span>
-            <DollarSign className="w-4 h-4 text-emerald-500" />
+            <DollarSign className="w-4 h-4 text-brand-500" />
           </div>
           <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
             {formatPrice(stats.totalRevenue)}
           </div>
-          <span className="text-[10px] text-emerald-500 font-bold">الطلبات المكتملة والمؤكدة</span>
+          <div className="text-[10px] text-slate-500 flex justify-between font-medium">
+            <span>تكلفة الجملة: {formatPrice(stats.totalWholesaleCost)}</span>
+          </div>
         </div>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold">إجمالي الطلبات</span>
-            <Package className="w-4 h-4 text-brand-500" />
+        {/* Card 2: Net Profit (Highlight) */}
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border-2 border-emerald-500/30 space-y-2 shadow-sm">
+          <div className="flex items-center justify-between text-emerald-500">
+            <span className="text-xs font-black flex items-center gap-1">
+              <TrendingUp className="w-4 h-4" />
+              صافي الفائدة الكلية
+            </span>
+            <span className="text-[10px] bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded-full font-black">
+              {stats.profitMargin}% هامش
+            </span>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            {stats.totalOrders}
+          <div className="text-xl sm:text-2xl font-black text-emerald-500 font-mono">
+            +{formatPrice(stats.totalNetProfit)}
           </div>
-          <span className="text-[10px] text-slate-400">طلب مسجل بالنظام</span>
+          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">
+            الأرباح الصافية بعد خصم تكلفة الشراء
+          </span>
         </div>
 
+        {/* Card 3: Today's Profit & Revenue */}
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-sm">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold">بانتظار التفعيل</span>
-            <Clock className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-bold flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-blue-500" />
+              أرباح اليوم
+            </span>
+            <span className="text-[10px] text-blue-400 font-bold">مبيعات: {formatPrice(stats.todayRevenue)}</span>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-amber-500">
-            {stats.pendingOrders}
+          <div className="text-xl sm:text-2xl font-black text-blue-500 font-mono">
+            +{formatPrice(stats.todayNetProfit)}
           </div>
-          <span className="text-[10px] text-amber-500 font-bold">تحتاج لمراجعة أو تسليم كود</span>
+          <span className="text-[10px] text-slate-400 font-medium">صافي فائدة مبيعات اليوم فقط</span>
         </div>
 
+        {/* Card 4: Month's Profit & Revenue */}
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-sm">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold">المنتجات في المتجر</span>
-            <Layers className="w-4 h-4 text-indigo-500" />
+            <span className="text-xs font-bold flex items-center gap-1">
+              <Coins className="w-3.5 h-3.5 text-purple-500" />
+              أرباح هذا الشهر
+            </span>
+            <span className="text-[10px] text-purple-400 font-bold">مبيعات: {formatPrice(stats.monthRevenue)}</span>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            {stats.productsCount}
+          <div className="text-xl sm:text-2xl font-black text-purple-500 font-mono">
+            +{formatPrice(stats.monthNetProfit)}
           </div>
-          <span className="text-[10px] text-indigo-500 font-bold">أدوات واشتراكات نشطة</span>
+          <span className="text-[10px] text-slate-400 font-medium">صافي مدخول الشهر الحالي</span>
         </div>
       </div>
 
       {/* Tabs Switcher */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
         <button
           onClick={() => setActiveTab('orders')}
           className={`px-4 py-2 rounded-xl text-xs font-black transition ${
@@ -235,13 +300,32 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setActiveTab('products')}
-          className={`px-4 py-2 rounded-xl text-xs font-black transition ${
+          className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 ${
             activeTab === 'products'
               ? 'bg-brand-600 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          إدارة المنتجات ({products.length})
+          <Layers className="w-3.5 h-3.5" />
+          <span>إدارة الباقات والاشتراكات ({products.length})</span>
+          <span className="bg-amber-400/20 text-amber-500 dark:text-amber-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+            تعديل مباشر
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('profits')}
+          className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 ${
+            activeTab === 'profits'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+          <span>تقرير الأرباح والمدخول 💰</span>
+          <span className="bg-emerald-400/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
+            +{formatPrice(stats.totalNetProfit)}
+          </span>
         </button>
 
         <button
@@ -398,59 +482,411 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* TAB 2: PRODUCTS */}
+      {/* TAB 2: PRODUCTS & PACKAGES EDITOR */}
       {activeTab === 'products' && (
         <div className="space-y-4">
+          {/* Quick Notice Header */}
+          <div className="p-5 rounded-3xl bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-slate-900 border border-blue-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-400" />
+                <span>لوحة التحكم وتعديل باقات الاشتراكات بدون برمجة</span>
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                اضغط على زر <strong className="text-amber-300">«تعديل الباقات والأسعار»</strong> أمام أي اشتراك لتغيير السعر بالدينار الجزائري، تعديل المدد (شهري، 3 أشهر، سنوي)، أو إضافة باقة جديدة مباشرة دون كتابة أي كود برمجي.
+              </p>
+            </div>
+            <div className="relative w-full md:w-72 shrink-0">
+              <input
+                type="text"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="ابحث عن اشتراك لتعديل باقاته..."
+                className="w-full pr-9 pl-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
+              />
+              <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+            </div>
+          </div>
+
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
-            <h2 className="text-base font-black text-slate-900 dark:text-white">
-              قائمة المنتجات والاشتراكات المتاحة ({products.length})
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-black text-slate-900 dark:text-white">
+                جميع الاشتراكات والمنتجات ({products.filter((p) => {
+                  if (!productSearch.trim()) return true;
+                  const q = productSearch.toLowerCase().trim();
+                  return p.name.toLowerCase().includes(q) || p.nameEn.toLowerCase().includes(q) || p.categoryNameAr.toLowerCase().includes(q);
+                }).length})
+              </h2>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products.map((prod) => (
-                <div
-                  key={prod.id}
-                  className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 space-y-3 flex flex-col justify-between"
-                >
-                  <div className="flex gap-3">
-                    <img
-                      src={prod.image}
-                      alt={prod.name}
-                      className="w-14 h-14 rounded-xl object-cover shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                        {prod.name}
-                      </h4>
-                      <span className="text-[10px] text-brand-500 font-semibold block">
-                        {prod.categoryNameAr}
-                      </span>
-                      <span className="text-xs font-black text-slate-900 dark:text-white mt-1 block">
-                        {formatPrice(prod.price)}
-                      </span>
+              {products
+                .filter((prod) => {
+                  if (!productSearch.trim()) return true;
+                  const q = productSearch.toLowerCase().trim();
+                  return (
+                    prod.name.toLowerCase().includes(q) ||
+                    prod.nameEn.toLowerCase().includes(q) ||
+                    prod.categoryNameAr.toLowerCase().includes(q)
+                  );
+                })
+                .map((prod) => (
+                  <div
+                    key={prod.id}
+                    className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 space-y-4 flex flex-col justify-between hover:border-brand-500/50 transition shadow-sm"
+                  >
+                    <div>
+                      {/* Product Header */}
+                      <div className="flex gap-3 items-start">
+                        <img
+                          src={prod.image}
+                          alt={prod.name}
+                          className="w-14 h-14 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-slate-700 shadow-sm"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-extrabold text-sm text-slate-900 dark:text-white truncate">
+                            {prod.name}
+                          </h4>
+                          <span className="text-[11px] text-brand-500 font-bold block">
+                            {prod.categoryNameAr} ({prod.nameEn})
+                          </span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs font-black text-slate-900 dark:text-white">
+                              يبدأ من: {formatPrice(prod.price)}
+                            </span>
+                            {prod.badge && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 font-bold border border-brand-200 dark:border-brand-800">
+                                {prod.badge}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Variants Summary */}
+                      <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                          <span>الباقات المتاحة ({prod.variants.length}):</span>
+                          <span className={prod.inStock ? 'text-emerald-500' : 'text-red-500'}>
+                            {prod.inStock ? '● متوفر' : '● غير متوفر'}
+                          </span>
+                        </div>
+                        <div className="space-y-1 max-h-24 overflow-y-auto">
+                          {prod.variants.map((v) => (
+                            <div
+                              key={v.id}
+                              className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800"
+                            >
+                              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">
+                                {v.name}
+                              </span>
+                              <span className="font-black text-brand-600 dark:text-brand-400 font-mono">
+                                {formatPrice(v.price)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="space-y-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingProduct(prod);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="w-full py-2.5 px-3 bg-brand-600 hover:bg-brand-500 active:scale-[0.98] text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-md shadow-brand-600/20"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>تعديل الباقات والأسعار ⚙️</span>
+                      </button>
+
+                      <Link
+                        href={`/products/${prod.slug}`}
+                        target="_blank"
+                        className="w-full py-1.5 text-center text-slate-500 hover:text-brand-500 text-[11px] font-bold flex items-center justify-center gap-1 transition"
+                      >
+                        <span>معاينة صفحة الاشتراك بالمتجر</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700 text-xs">
-                    <span className="text-[11px] text-emerald-500 font-bold">
-                      {prod.inStock ? 'متوفر للتسليم' : 'غير متوفر'}
-                    </span>
-                    <Link
-                      href={`/products/${prod.slug}`}
-                      className="text-brand-500 hover:underline text-[11px] font-bold flex items-center gap-1"
-                    >
-                      <span>معاينة بالمتجر</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 3: SETTINGS & PIXEL */}
+      {/* TAB 3: PROFITS & FINANCIAL ANALYTICS */}
+      {activeTab === 'profits' && (
+        <div className="space-y-6">
+          {/* Main Financial Overview Banner */}
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-indigo-950/60 border border-emerald-500/30 space-y-4 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-bold border border-emerald-500/30">
+                  <Coins className="w-3.5 h-3.5" />
+                  <span>نظام تتبع صافي الفائدة والأرباح بالدينار الجزائري (DZD)</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-white">
+                  تقرير الأرباح والمدخول المالي لمتجر Qadivio Store
+                </h2>
+                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                  يتم حساب الأرباح تلقائياً بناءً على <strong className="text-emerald-400">سعر البيع للزبون</strong> مطروحاً منه <strong className="text-blue-400">سعر الشراء / الجملة للاشتراك</strong>، لمعرفة مدخولك اليومي والشهري بدقة.
+                </p>
+              </div>
+
+              <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-2xl text-left shrink-0">
+                <span className="text-[10px] text-slate-400 block font-bold">نسبة هامش الربح الإجمالي</span>
+                <span className="text-2xl font-black text-emerald-400 font-mono">
+                  {stats.profitMargin}%
+                </span>
+              </div>
+            </div>
+
+            {/* 4 Financial Metric Highlights */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                  فائدة اليوم الصافية
+                </span>
+                <div className="text-xl font-black text-emerald-400 font-mono">
+                  +{formatPrice(stats.todayNetProfit)}
+                </div>
+                <div className="text-[10px] text-slate-400 flex justify-between">
+                  <span>مبيعات: {formatPrice(stats.todayRevenue)}</span>
+                  <span>جملة: {formatPrice(stats.todayWholesaleCost)}</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                  <Coins className="w-3.5 h-3.5 text-purple-400" />
+                  فائدة هذا الشهر الصافية
+                </span>
+                <div className="text-xl font-black text-emerald-400 font-mono">
+                  +{formatPrice(stats.monthNetProfit)}
+                </div>
+                <div className="text-[10px] text-slate-400 flex justify-between">
+                  <span>مبيعات: {formatPrice(stats.monthRevenue)}</span>
+                  <span>جملة: {formatPrice(stats.monthWholesaleCost)}</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                  <Wallet className="w-3.5 h-3.5 text-amber-400" />
+                  إجمالي تكلفة الشراء (جملة)
+                </span>
+                <div className="text-xl font-black text-amber-400 font-mono">
+                  {formatPrice(stats.totalWholesaleCost)}
+                </div>
+                <span className="text-[10px] text-slate-500 block">
+                  رأس المال المدفوع لتوفير الاشتراكات
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 space-y-1">
+                <span className="text-[11px] font-extrabold text-emerald-300 flex items-center gap-1">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  صافي الفائدة التراكمية
+                </span>
+                <div className="text-xl font-black text-emerald-300 font-mono">
+                  +{formatPrice(stats.totalNetProfit)}
+                </div>
+                <span className="text-[10px] text-emerald-400/80 font-bold block">
+                  صافي الأرباح في جيبك (الطلبات المكتملة)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Table: Product Profit Performance */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-brand-500" />
+                  <span>تحليل الأرباح والفائدة حسب كل اشتراك</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  يوضح كم حققت من أرباح صافية من كل اشتراك بناءً على عدد مرات بيعه
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-extrabold">
+                  <tr>
+                    <th className="p-3.5">الاشتراك</th>
+                    <th className="p-3.5">سعر البيع الافتتاحي</th>
+                    <th className="p-3.5">سعر الجملة الافتتاحي</th>
+                    <th className="p-3.5">الفائدة بالقطعة</th>
+                    <th className="p-3.5">الكمية المباعة</th>
+                    <th className="p-3.5">إجمالي المبيعات</th>
+                    <th className="p-3.5">صافي الفائدة المحققة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {products.map((prod) => {
+                    const lowestVariant = prod.variants[0];
+                    const sellPrice = lowestVariant?.price || prod.price;
+                    const costPrice = lowestVariant?.costPrice ?? prod.costPrice ?? Math.round(sellPrice * 0.55);
+                    const unitProfit = Math.max(0, sellPrice - costPrice);
+
+                    // Find if there are recorded sales in stats
+                    const soldStat = stats.productsProfitBreakdown.find((s) => s.productId === prod.id);
+                    const unitsSold = soldStat ? soldStat.unitsSold : 0;
+                    const totalSoldRevenue = soldStat ? soldStat.revenue : 0;
+                    const totalProfitMade = soldStat ? soldStat.profit : 0;
+
+                    return (
+                      <tr key={prod.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <img
+                              src={prod.image}
+                              alt={prod.name}
+                              className="w-8 h-8 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700"
+                            />
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white truncate max-w-[180px]">
+                                {prod.name}
+                              </div>
+                              <span className="text-[10px] text-brand-500 font-medium">
+                                {prod.categoryNameAr}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="p-3.5 font-mono font-bold text-slate-900 dark:text-white">
+                          {formatPrice(sellPrice)}
+                        </td>
+
+                        <td className="p-3.5 font-mono font-bold text-blue-500">
+                          {formatPrice(costPrice)}
+                        </td>
+
+                        <td className="p-3.5 font-mono font-bold text-emerald-500">
+                          +{formatPrice(unitProfit)} ({sellPrice > 0 ? ((unitProfit / sellPrice) * 100).toFixed(0) : 0}%)
+                        </td>
+
+                        <td className="p-3.5 font-mono font-bold text-slate-700 dark:text-slate-300">
+                          {unitsSold > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950 text-brand-500 font-bold">
+                              {unitsSold} اشتراك
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">0</span>
+                          )}
+                        </td>
+
+                        <td className="p-3.5 font-mono font-bold text-slate-900 dark:text-white">
+                          {unitsSold > 0 ? formatPrice(totalSoldRevenue) : '0 د.ج'}
+                        </td>
+
+                        <td className="p-3.5 font-mono font-black text-emerald-500">
+                          {unitsSold > 0 ? (
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30">
+                              +{formatPrice(totalProfitMade)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">0 د.ج</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Table: Profit per Completed Order */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+            <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <Coins className="w-4 h-4 text-emerald-500" />
+              <span>سجل الفائدة في كل طلب مكتمل ومفعل</span>
+            </h3>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-extrabold">
+                  <tr>
+                    <th className="p-3.5">رقم الطلب</th>
+                    <th className="p-3.5">العميل</th>
+                    <th className="p-3.5">المنتجات المطلوبة</th>
+                    <th className="p-3.5">سعر البيع الإجمالي</th>
+                    <th className="p-3.5">تكلفة الجملة</th>
+                    <th className="p-3.5">الفائدة الصافية المحققة</th>
+                    <th className="p-3.5">التاريخ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {orders
+                    .filter((o) => o.status === 'completed')
+                    .map((order) => {
+                      const orderCost = order.items.reduce((sum, it) => {
+                        let c = it.costPrice;
+                        if (typeof c !== 'number') {
+                          const prod = products.find((p) => p.id === it.productId);
+                          const variant = prod?.variants.find((v) => v.name === it.variantName);
+                          c = variant?.costPrice ?? prod?.costPrice ?? Math.round(it.price * 0.55);
+                        }
+                        return sum + c * (it.quantity || 1);
+                      }, 0);
+                      const profit = Math.max(0, order.total - orderCost);
+
+                      return (
+                        <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                          <td className="p-3.5 font-mono font-bold text-brand-600 dark:text-brand-400">
+                            {order.id}
+                          </td>
+                          <td className="p-3.5">
+                            <span className="font-bold text-slate-900 dark:text-white block">
+                              {order.customerName}
+                            </span>
+                            <span className="font-mono text-[11px] text-slate-400">
+                              {order.customerPhone}
+                            </span>
+                          </td>
+                          <td className="p-3.5">
+                            {order.items.map((it, idx) => (
+                              <div key={idx} className="text-[11px] text-slate-700 dark:text-slate-300">
+                                {it.name} <span className="text-slate-400">({it.variantName})</span>
+                              </div>
+                            ))}
+                          </td>
+                          <td className="p-3.5 font-mono font-bold text-slate-900 dark:text-white">
+                            {formatPrice(order.total)}
+                          </td>
+                          <td className="p-3.5 font-mono font-bold text-blue-500">
+                            {formatPrice(orderCost)}
+                          </td>
+                          <td className="p-3.5 font-mono font-black text-emerald-500">
+                            <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30">
+                              +{formatPrice(profit)}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-slate-400 font-mono text-[11px]">
+                            {formatDate(order.createdAt)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: SETTINGS & PIXEL */}
       {activeTab === 'settings' && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-6">
           <div>
@@ -563,6 +999,21 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* EDIT PRODUCT & PLANS MODAL */}
+      <AdminProductEditModal
+        product={editingProduct}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingProduct(null);
+        }}
+        onSaved={(updatedProduct) => {
+          setProducts((prev) =>
+            prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+          );
+        }}
+      />
 
     </div>
   );

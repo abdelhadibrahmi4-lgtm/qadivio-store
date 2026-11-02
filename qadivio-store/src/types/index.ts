@@ -9,7 +9,8 @@ export interface ProductVariant {
   id: string;
   name: string; // e.g. "شهر واحد", "3 أشهر", "سنة كاملة"
   durationMonths: number;
-  price: number; // in DZD
+  price: number; // in DZD (Selling Price)
+  costPrice?: number; // in DZD (Wholesale / Cost Price)
   oldPrice?: number;
   isPopular?: boolean;
 }
@@ -41,7 +42,8 @@ export interface Product {
   longDescription?: string;
   category: ProductCategory;
   categoryNameAr: string;
-  price: number; // base price
+  price: number; // base price (selling)
+  costPrice?: number; // base wholesale cost
   oldPrice?: number;
   discountPercentage?: number;
   image: string;
@@ -69,6 +71,7 @@ export interface CartItem {
   accountTypeId: string;
   accountTypeName: string;
   unitPrice: number;
+  costPrice?: number;
   quantity: number;
 }
 
@@ -91,6 +94,7 @@ export interface OrderItem {
   accountTypeName: string;
   quantity: number;
   price: number;
+  costPrice?: number;
 }
 
 export interface Order {

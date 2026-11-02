@@ -22,6 +22,8 @@ import { DealShowcase } from '@/components/product/DealShowcase';
 import { TrendingMarquee } from '@/components/home/TrendingMarquee';
 import { PaymentMethodsBanner } from '@/components/home/PaymentMethodsBanner';
 import { TrustAndChannelsSection } from '@/components/home/TrustAndChannelsSection';
+import { MascotExperienceSection } from '@/components/home/MascotExperienceSection';
+import { DigitalExperienceBanner } from '@/components/home/DigitalExperienceBanner';
 
 export const revalidate = 60; // ISR cache revalidation
 
@@ -52,6 +54,26 @@ export default async function HomePage() {
             {/* Right: Brand Headline, CTAs & Quick Filters */}
             <div className="lg:col-span-7 text-center lg:text-right space-y-6">
               
+              {/* Official Store Logo Banner at the top of the page */}
+              <div className="flex items-center justify-center lg:justify-start gap-4 pb-1">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl overflow-hidden shadow-2xl shadow-[#3478F0]/50 border-2 border-white/20 p-1 bg-[#2f73ee] shrink-0 transform hover:scale-105 transition-transform duration-300">
+                  <img
+                    src="/brand/official-logo.png"
+                    alt="Qadivio Store Official Logo"
+                    className="w-full h-full object-cover rounded-[20px]"
+                  />
+                </div>
+                <div className="text-right space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3478F0]/20 border border-[#3478F0]/40 text-[#AFC9FA] text-[11px] font-extrabold backdrop-blur-md">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>المتجر الرسمي المعتمد 🇩🇿</span>
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-white tracking-wide">
+                    Qadivio Store
+                  </div>
+                </div>
+              </div>
+
               {/* Trust Pill */}
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#3478F0]/15 border border-[#3478F0]/30 text-[#AFC9FA] text-xs font-bold backdrop-blur-md">
                 <span className="w-2 h-2 rounded-full bg-[#3478F0] animate-ping" />
@@ -197,7 +219,10 @@ export default async function HomePage() {
         <TrendingMarquee products={products} />
       </section>
 
-      {/* 3. CATEGORIES EXPLORER */}
+      {/* 3. OFFICIAL 3D MASCOT & SERVICE EXPERIENCE (FROM BRAND CREATIVES) */}
+      <MascotExperienceSection />
+
+      {/* 4. CATEGORIES EXPLORER */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-xl mx-auto mb-8 space-y-2">
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
@@ -243,10 +268,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 4. PAYMENT METHODS SHOWCASE BANNER (BaridiMob, CCP, Flexy, RedotPay) */}
+      {/* 5. PAYMENT METHODS SHOWCASE BANNER (BaridiMob, CCP, Flexy, RedotPay) */}
       <PaymentMethodsBanner />
 
-      {/* 5. MAIN PRODUCT CATALOG GRID */}
+      {/* 6. MAIN PRODUCT CATALOG GRID */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
           <div>
@@ -276,7 +301,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 6. TRUST, BUSINESS VALUES & OFFICIAL SOCIAL CHANNELS */}
+      {/* 7. DIGITAL EXPERIENCE BANNER (VR & VIP CARD CREATIVES) */}
+      <DigitalExperienceBanner />
+
+      {/* 8. TRUST, BUSINESS VALUES & OFFICIAL SOCIAL CHANNELS */}
       <TrustAndChannelsSection />
 
       {/* 7. FAQ SECTION PREVIEW */}

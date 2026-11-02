@@ -90,7 +90,8 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className="dark" data-theme="dark">
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/brand/official-logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/brand/official-logo.png" />
       </head>
       <body className="antialiased selection:bg-[#3478F0] selection:text-white">
         <CartProvider>
