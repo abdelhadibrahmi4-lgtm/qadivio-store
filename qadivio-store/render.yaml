@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: qadivio-store
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NEXT_PUBLIC_META_PIXEL_ID
+        value: 967680699242701
+      - key: ADMIN_PASSWORD
+        value: admin123456
+      - key: NEXT_PUBLIC_WHATSAPP_PHONE
+        value: "213555000000"
+      - key: NEXT_PUBLIC_BARIDIMOB_RIP
+        value: "00799999000123456789"
+      - key: NEXT_PUBLIC_BARIDIMOB_HOLDER
+        value: "QADIVIO DIGITAL SERVICES"
