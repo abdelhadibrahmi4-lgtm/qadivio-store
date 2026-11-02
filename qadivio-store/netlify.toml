@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  ADMIN_PASSWORD = "admin123456"
+  NEXT_PUBLIC_META_PIXEL_ID = "967680699242701"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
